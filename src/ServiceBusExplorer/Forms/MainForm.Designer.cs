@@ -36,6 +36,7 @@ namespace ServiceBusExplorer.Forms
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectUsingSASToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.connectUsingEntraServiceBusToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectUsingEntraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.savedConnectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparatorMain = new System.Windows.Forms.ToolStripSeparator();
@@ -457,6 +458,7 @@ namespace ServiceBusExplorer.Forms
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.connectUsingSASToolStripMenuItem,
+            this.connectUsingEntraServiceBusToolStripMenuItem,
             this.connectUsingEntraToolStripMenuItem,
             this.savedConnectionsToolStripMenuItem,
             this.toolStripSeparatorMain,
@@ -471,6 +473,13 @@ namespace ServiceBusExplorer.Forms
             this.connectUsingSASToolStripMenuItem.Size = new System.Drawing.Size(245, 22);
             this.connectUsingSASToolStripMenuItem.Text = "&Connect using SAS";
             this.connectUsingSASToolStripMenuItem.Click += new System.EventHandler(this.connectUsingSASToolStripMenuItem_Click);
+            // 
+            // connectUsingEntraServiceBusToolStripMenuItem
+            // 
+            this.connectUsingEntraServiceBusToolStripMenuItem.Name = "connectUsingEntraServiceBusToolStripMenuItem";
+            this.connectUsingEntraServiceBusToolStripMenuItem.Size = new System.Drawing.Size(245, 22);
+            this.connectUsingEntraServiceBusToolStripMenuItem.Text = "Connect using &Entra";
+            this.connectUsingEntraServiceBusToolStripMenuItem.Click += new System.EventHandler(this.connectUsingEntraServiceBusToolStripMenuItem_Click);
             // 
             // connectUsingEntraToolStripMenuItem
             // 
@@ -3691,6 +3700,7 @@ namespace ServiceBusExplorer.Forms
         private System.Windows.Forms.ToolStripMenuItem duplicateSubscriptionMenuItem;
         private System.Windows.Forms.ToolStripMenuItem duplicateQueueMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectUsingSASToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem connectUsingEntraServiceBusToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectUsingEntraToolStripMenuItem;
     }
 }

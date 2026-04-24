@@ -70,6 +70,7 @@ namespace ServiceBusExplorer.Forms
         private const string SelectedEntitiesTooltip = "Select which entity groups Service Bus Explorer loads for this namespace.";
         private const string AadSelectedEntitiesTooltip =
             "Azure Active Directory connections currently load queues and topics. Subscription nodes remain available under topics.";
+        private const string EnterNamespaceDetails = "Enter namespace details...";
 
         //***************************
         // Tooltips
@@ -100,6 +101,7 @@ namespace ServiceBusExplorer.Forms
 
         private readonly ServiceBusHelper serviceBusHelper;
         private readonly ConfigFileUse configFileUse;
+        private readonly bool entraOnly;
         private bool ignoreSelectedIndexChange;
         private bool ignoreAuthModeChange;
 
@@ -115,21 +117,20 @@ namespace ServiceBusExplorer.Forms
         #region Public Constructor
 
         public ConnectForm(ServiceBusHelper serviceBusHelper, ConfigFileUse configFileUse)
+            : this(serviceBusHelper, configFileUse, false)
+        {
+        }
+
+        public ConnectForm(ServiceBusHelper serviceBusHelper, ConfigFileUse configFileUse, bool entraOnly)
         {
             InitializeComponent();
 
+            this.entraOnly = entraOnly;
             this.configFileUse = configFileUse;
             SetConfigFileUseLabelText(lblConfigFileUse);
 
             this.serviceBusHelper = serviceBusHelper;
-            cboServiceBusNamespace.Items.Add(SelectServiceBusNamespace);
-            cboServiceBusNamespace.Items.Add(EnterConnectionString);
-            if (serviceBusHelper.ServiceBusNamespaces != null)
-            {
-                // ReSharper disable CoVariantArrayConversion
-                cboServiceBusNamespace.Items.AddRange(serviceBusHelper.ServiceBusNamespaces.Keys.OrderBy(s => s).ToArray());
-                // ReSharper restore CoVariantArrayConversion
-            }
+            PopulateNamespaceCombo();
 
             ConnectivityMode = ServiceBusHelper.ConnectivityMode;
             cboConnectivityMode.DataSource = Enum.GetValues(typeof(ConnectivityMode));
@@ -146,14 +147,25 @@ namespace ServiceBusExplorer.Forms
             var settings = new MessagingFactorySettings();
             cboTransportType.SelectedItem = settings.TransportType;
 
-            cboServiceBusNamespace.SelectedIndex = connectionStringIndex > 0 ? connectionStringIndex : 0;
+            if (entraOnly)
+            {
+                Text = "Connect Using Entra Authentication";
+                cboServiceBusNamespace.SelectedIndex = 1; // "Enter namespace details..."
+                SetSelectedAuthMode(ServiceBusAuthMode.AzureActiveDirectory);
+                cboAuthMode.Enabled = false;
+            }
+            else
+            {
+                cboServiceBusNamespace.SelectedIndex = connectionStringIndex > 0 ? connectionStringIndex : 0;
+            }
 
             txtQueueFilterExpression.Text = FilterExpressionHelper.QueueFilterExpression;
             txtTopicFilterExpression.Text = FilterExpressionHelper.TopicFilterExpression;
             txtSubscriptionFilterExpression.Text = FilterExpressionHelper.SubscriptionFilterExpression;
             btnOk.Enabled = cboServiceBusNamespace.SelectedIndex > 1 ||
                             (cboServiceBusNamespace.Text == EnterConnectionString &&
-                             !string.IsNullOrWhiteSpace(connectionString));
+                             !string.IsNullOrWhiteSpace(connectionString)) ||
+                            (entraOnly && cboServiceBusNamespace.SelectedIndex == 1);
 
             foreach (var item in ConfigurationHelper.Entities)
             {
@@ -168,6 +180,47 @@ namespace ServiceBusExplorer.Forms
             toolTip.SetToolTip(cboSelectedEntities, SelectedEntitiesTooltip);
 
             cboServiceBusNamespace_SelectedIndexChanged(cboServiceBusNamespace, EventArgs.Empty);
+            validation_TextChanged(this, EventArgs.Empty);
+
+            if (entraOnly)
+            {
+                ApplyEntraOnlyMode();
+            }
+        }
+
+        private void PopulateNamespaceCombo()
+        {
+            cboServiceBusNamespace.Items.Clear();
+            cboServiceBusNamespace.Items.Add(SelectServiceBusNamespace);
+            cboServiceBusNamespace.Items.Add(entraOnly ? EnterNamespaceDetails : EnterConnectionString);
+
+            if (serviceBusHelper.ServiceBusNamespaces != null)
+            {
+                var keys = serviceBusHelper.ServiceBusNamespaces.Keys.OrderBy(s => s);
+                if (entraOnly)
+                {
+                    // Only show AAD-configured namespaces in Entra-only mode
+                    keys = serviceBusHelper.ServiceBusNamespaces
+                        .Where(kvp => kvp.Value.IsAzureActiveDirectory)
+                        .Select(kvp => kvp.Key)
+                        .OrderBy(s => s);
+                }
+
+                // ReSharper disable CoVariantArrayConversion
+                cboServiceBusNamespace.Items.AddRange(keys.ToArray());
+                // ReSharper restore CoVariantArrayConversion
+            }
+        }
+
+        private void ApplyEntraOnlyMode()
+        {
+            // Force AAD auth mode and lock it
+            SetSelectedAuthMode(ServiceBusAuthMode.AzureActiveDirectory);
+            cboAuthMode.Enabled = false;
+
+            // Update UI to reflect AAD state
+            GetSelectionState(out var connectionStringType, out var containsStsEndpoint, out _);
+            UpdateConnectionSettingsUi(connectionStringType, containsStsEndpoint);
             validation_TextChanged(this, EventArgs.Empty);
         }
 
@@ -268,7 +321,8 @@ namespace ServiceBusExplorer.Forms
             FilterExpressionHelper.TopicFilterExpression = txtTopicFilterExpression.Text;
             FilterExpressionHelper.SubscriptionFilterExpression = txtSubscriptionFilterExpression.Text;
             connectionStringIndex = cboServiceBusNamespace.SelectedIndex;
-            if (cboServiceBusNamespace.Text == EnterConnectionString)
+            if (cboServiceBusNamespace.Text == EnterConnectionString ||
+                cboServiceBusNamespace.Text == EnterNamespaceDetails)
             {
                 connectionString = ConnectionString;
             }
@@ -304,7 +358,8 @@ namespace ServiceBusExplorer.Forms
         {
             return connectionStringType == ServiceBusNamespaceType.OnPremises ||
                    containsStsEndpoint ||
-                   (cboServiceBusNamespace.Text == EnterConnectionString &&
+                   ((cboServiceBusNamespace.Text == EnterConnectionString ||
+                     cboServiceBusNamespace.Text == EnterNamespaceDetails) &&
                     SelectedAuthMode == ServiceBusAuthMode.Sas);
         }
 
@@ -317,7 +372,7 @@ namespace ServiceBusExplorer.Forms
             lblNamespace.Text = AuthenticationModeLabel;
             txtNamespace.Visible = false;
             cboAuthMode.Visible = true;
-            cboAuthMode.Enabled = connectionStringType != ServiceBusNamespaceType.OnPremises && !containsStsEndpoint;
+            cboAuthMode.Enabled = connectionStringType != ServiceBusNamespaceType.OnPremises && !containsStsEndpoint && !entraOnly;
 
             lblUri.Text = usesRawConnectionStringEditor ? ConnectionStringLabel : UriLabel;
             txtUri.Multiline = usesRawConnectionStringEditor;
@@ -626,7 +681,8 @@ namespace ServiceBusExplorer.Forms
 
             btnRename.Visible = false;
             btnDelete.Visible = false;
-            btnSave.Visible = cboServiceBusNamespace.Text == EnterConnectionString;
+            btnSave.Visible = cboServiceBusNamespace.Text == EnterConnectionString ||
+                              cboServiceBusNamespace.Text == EnterNamespaceDetails;
 
             if (cboServiceBusNamespace.SelectedIndex == 0)
             {
@@ -637,9 +693,14 @@ namespace ServiceBusExplorer.Forms
                 return;
             }
 
-            if (cboServiceBusNamespace.Text == EnterConnectionString)
+            if (cboServiceBusNamespace.Text == EnterConnectionString ||
+                cboServiceBusNamespace.Text == EnterNamespaceDetails)
             {
                 PopulateManualConnectionFields(connectionString);
+                if (entraOnly)
+                {
+                    ApplyEntraOnlyMode();
+                }
                 validation_TextChanged(sender, e);
                 return;
             }
@@ -684,6 +745,12 @@ namespace ServiceBusExplorer.Forms
             }
 
             cboTransportType.SelectedItem = selectedNamespace.TransportType;
+
+            if (entraOnly)
+            {
+                ApplyEntraOnlyMode();
+            }
+
             validation_TextChanged(sender, e);
         }
 
@@ -895,7 +962,7 @@ namespace ServiceBusExplorer.Forms
             try
             {
                 var key = cboServiceBusNamespace.Text;
-                var isNewServiceBusNamespace = (key == EnterConnectionString);
+                var isNewServiceBusNamespace = (key == EnterConnectionString || key == EnterNamespaceDetails);
 
                 BuildCurrentConnectionString();
 
@@ -988,12 +1055,7 @@ namespace ServiceBusExplorer.Forms
 
                 serviceBusHelper.ServiceBusNamespaces[key] = ServiceBusNamespace.GetServiceBusNamespace(key, value, MainForm.StaticWriteToLog);
 
-                cboServiceBusNamespace.Items.Clear();
-                cboServiceBusNamespace.Items.Add(SelectServiceBusNamespace);
-                cboServiceBusNamespace.Items.Add(EnterConnectionString);
-
-                // ReSharper disable once CoVariantArrayConversion
-                cboServiceBusNamespace.Items.AddRange(serviceBusHelper.ServiceBusNamespaces.Keys.OrderBy(s => s).ToArray());
+                PopulateNamespaceCombo();
                 cboServiceBusNamespace.Text = key;
             }
             catch (Exception ex)

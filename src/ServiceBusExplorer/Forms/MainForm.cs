@@ -545,6 +545,44 @@ namespace ServiceBusExplorer.Forms
             }
         }
 
+        async void connectUsingEntraServiceBusToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var connectForm = new ConnectForm(serviceBusHelper, configFileUse, entraOnly: true))
+                {
+                    if (connectForm.ShowDialog() != DialogResult.OK)
+                    {
+                        UpdateSavedConnectionsMenu();
+                        return;
+                    }
+                    UpdateSavedConnectionsMenu();
+                    SelectedEntities = connectForm.SelectedEntities;
+                    ServiceBusHelper.ConnectivityMode = connectForm.ConnectivityMode;
+                    ServiceBusHelper.UseAmqpWebSockets = connectForm.UseAmqpWebSockets;
+                    var serviceBusNamespace = connectForm.ServiceBusNamespaceInstance
+                        ?? ServiceBusNamespace.GetServiceBusNamespace(connectForm.Key ?? "Manual",
+                            connectForm.ConnectionString, StaticWriteToLog);
+                    serviceBusHelper.Connect(serviceBusNamespace);
+
+                    SetTitle(serviceBusNamespace.Namespace, "Service Bus");
+                    panelTreeView.HeaderText = string.Format(NamespaceTypeFormat, "Service Bus");
+
+                    foreach (var userControl in panelMain.Controls.OfType<UserControl>())
+                    {
+                        userControl.Dispose();
+                    }
+                    panelMain.Controls.Clear();
+                    panelMain.BackColor = SystemColors.Window;
+                    await ShowEntities(EntityType.All);
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+            }
+        }
+
         async void connectUsingEntraToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try

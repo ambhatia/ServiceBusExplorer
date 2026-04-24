@@ -379,6 +379,83 @@ namespace ServiceBusExplorer.Tests.Forms
             result.Should().BeNull();
         }
 
+        [Fact]
+        public void EntraOnlyMode_ForcesAadAuthAndDisablesDropdown()
+        {
+            int authModeIndex = -1;
+            bool authModeEnabled = true;
+            string titleText = null;
+            string namespaceText = null;
+
+            RunOnStaThread(() =>
+            {
+                ResetManualConnectionState();
+
+                using (var form = new ConnectForm(new ServiceBusHelper((message, asynchronous) => { }),
+                           ConfigFileUse.ApplicationConfig, entraOnly: true))
+                {
+                    authModeIndex = GetComboBox(form, "cboAuthMode").SelectedIndex;
+                    authModeEnabled = GetComboBox(form, "cboAuthMode").Enabled;
+                    titleText = form.Text;
+                    namespaceText = GetComboBox(form, "cboServiceBusNamespace").Text;
+                }
+            });
+
+            authModeIndex.Should().Be(1, "AAD should be selected");
+            authModeEnabled.Should().BeFalse("auth mode dropdown should be locked");
+            titleText.Should().Contain("Entra");
+            namespaceText.Should().Be("Enter namespace details...");
+        }
+
+        [Fact]
+        public void EntraOnlyMode_HidesSharedAccessKeyField()
+        {
+            bool issuerSecretVisible = true;
+
+            RunOnStaThread(() =>
+            {
+                ResetManualConnectionState();
+
+                using (var form = new ConnectForm(new ServiceBusHelper((message, asynchronous) => { }),
+                           ConfigFileUse.ApplicationConfig, entraOnly: true))
+                {
+                    issuerSecretVisible = GetTextBox(form, "txtIssuerSecret").Visible;
+                }
+            });
+
+            issuerSecretVisible.Should().BeFalse("SharedAccessKey field should be hidden in Entra-only mode");
+        }
+
+        [Fact]
+        public void EntraOnlyMode_BuildsValidAadNamespace()
+        {
+            string endpoint = null;
+            string tenantId = null;
+            bool isAad = false;
+
+            RunOnStaThread(() =>
+            {
+                ResetManualConnectionState();
+
+                using (var form = new ConnectForm(new ServiceBusHelper((message, asynchronous) => { }),
+                           ConfigFileUse.ApplicationConfig, entraOnly: true))
+                {
+                    GetTextBox(form, "txtUri").Text = "myns.servicebus.windows.net";
+                    GetTextBox(form, "txtIssuerName").Text = "my-tenant";
+
+                    InvokePrivateMethod(form, "BuildCurrentConnectionString");
+
+                    endpoint = form.ServiceBusNamespaceInstance?.Uri;
+                    tenantId = form.ServiceBusNamespaceInstance?.TenantId;
+                    isAad = form.ServiceBusNamespaceInstance?.IsAzureActiveDirectory == true;
+                }
+            });
+
+            isAad.Should().BeTrue();
+            endpoint.Should().Be("sb://myns.servicebus.windows.net");
+            tenantId.Should().Be("my-tenant");
+        }
+
         static T InvokeStaticPrivateMethod<T>(Type type, string methodName, params object[] args)
         {
             var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
