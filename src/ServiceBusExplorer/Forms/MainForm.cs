@@ -4677,7 +4677,26 @@ namespace ServiceBusExplorer.Forms
                             try
                             {
 
-                                var eventHubs = await serviceBusHelper.NamespaceManager.GetEventHubsAsync();
+                                IEnumerable<EventHubDescription> eventHubs;
+                                if (!string.IsNullOrEmpty(serviceBusHelper.EntityPath))
+                                {
+                                    try
+                                    {
+                                        var singleHub = serviceBusHelper.GetEventHub(serviceBusHelper.EntityPath);
+                                        eventHubs = singleHub != null
+                                            ? new[] { singleHub }
+                                            : Enumerable.Empty<EventHubDescription>();
+                                    }
+                                    catch
+                                    {
+                                        // EntityPath points to an entity that is not an event hub
+                                        eventHubs = Enumerable.Empty<EventHubDescription>();
+                                    }
+                                }
+                                else
+                                {
+                                    eventHubs = await serviceBusHelper.NamespaceManager.GetEventHubsAsync();
+                                }
                                 Cursor.Current = Cursors.WaitCursor;
                                 eventHubListNode.Nodes.Clear();
                                 if (eventHubs != null)

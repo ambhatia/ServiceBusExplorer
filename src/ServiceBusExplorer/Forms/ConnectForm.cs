@@ -320,11 +320,14 @@ namespace ServiceBusExplorer.Forms
             FilterExpressionHelper.QueueFilterExpression = txtQueueFilterExpression.Text;
             FilterExpressionHelper.TopicFilterExpression = txtTopicFilterExpression.Text;
             FilterExpressionHelper.SubscriptionFilterExpression = txtSubscriptionFilterExpression.Text;
-            connectionStringIndex = cboServiceBusNamespace.SelectedIndex;
-            if (cboServiceBusNamespace.Text == EnterConnectionString ||
-                cboServiceBusNamespace.Text == EnterNamespaceDetails)
+            if (!entraOnly)
             {
-                connectionString = ConnectionString;
+                connectionStringIndex = cboServiceBusNamespace.SelectedIndex;
+                if (cboServiceBusNamespace.Text == EnterConnectionString ||
+                    cboServiceBusNamespace.Text == EnterNamespaceDetails)
+                {
+                    connectionString = ConnectionString;
+                }
             }
         }
 

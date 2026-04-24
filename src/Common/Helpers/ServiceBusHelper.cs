@@ -437,6 +437,11 @@ namespace ServiceBusExplorer
         }
 
         /// <summary>
+        /// Gets the EntityPath from the current namespace, if set.
+        /// </summary>
+        public string EntityPath => serviceBusNamespaceInstance?.EntityPath;
+
+        /// <summary>
         /// Gets or sets the connection string.
         /// </summary>
         public string ConnectionString

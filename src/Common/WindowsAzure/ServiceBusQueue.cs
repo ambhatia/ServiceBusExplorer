@@ -71,9 +71,17 @@ namespace ServiceBusExplorer.WindowsAzure
                     return queues;
                 }
 
-                return new List<QueueDescription> {
-                    GetQueueUsingEntityPath(timeoutInSeconds)
-                };
+                try
+                {
+                    return new List<QueueDescription> {
+                        GetQueueUsingEntityPath(timeoutInSeconds)
+                    };
+                }
+                catch (MessagingException)
+                {
+                    // EntityPath points to an entity that is not a queue
+                    return new List<QueueDescription>();
+                }
             }
             throw new ApplicationException(ServiceBusIsDisconnected);
         }
