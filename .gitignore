@@ -169,3 +169,5 @@ $RECYCLE.BIN/
 
 # Event Grid Explorer Library pkgrefgen
 /src/EventGridExplorerLibrary/.pkgrefgen/
+
+PR874-today-changes.txt
