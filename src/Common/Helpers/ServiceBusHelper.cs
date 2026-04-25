@@ -753,6 +753,10 @@ namespace ServiceBusExplorer
                 currentSharedAccessKey = serviceBusNamespace.SharedAccessKey;
                 currentSharedAccessKeyName = serviceBusNamespace.SharedAccessKeyName;
 
+                // Reset connection-scoped state so reconnects don't carry over stale values.
+                IsEventHubNamespace = false;
+                eventHubMessagingFactory = null;
+
                 if (isAad)
                 {
                     var endpointUri = new Uri(serviceBusNamespace.Uri);
@@ -763,7 +767,6 @@ namespace ServiceBusExplorer
                     // requires the Event Hub audience instead.
                     aadTokenProvider = AadCredentialFactory.CreateOldSdkTokenProvider(tenantId);
                     namespaceManager = new Microsoft.ServiceBus.NamespaceManager(endpointUri, aadTokenProvider);
-                    IsEventHubNamespace = false;
 
                     try
                     {
