@@ -4682,14 +4682,12 @@ namespace ServiceBusExplorer.Forms
                                 {
                                     try
                                     {
-                                        var singleHub = serviceBusHelper.GetEventHub(serviceBusHelper.EntityPath);
-                                        eventHubs = singleHub != null
-                                            ? new[] { singleHub }
-                                            : Enumerable.Empty<EventHubDescription>();
+                                        var singleHub = await serviceBusHelper.NamespaceManager.GetEventHubAsync(serviceBusHelper.EntityPath);
+                                        eventHubs = singleHub != null ? new[] { singleHub } : Enumerable.Empty<EventHubDescription>();
                                     }
-                                    catch
+                                    catch (MessagingException)
                                     {
-                                        // EntityPath points to an entity that is not an event hub
+                                        // EntityPath may not exist or may refer to a different entity type
                                         eventHubs = Enumerable.Empty<EventHubDescription>();
                                     }
                                 }
