@@ -77,9 +77,10 @@ namespace ServiceBusExplorer.WindowsAzure
                         GetQueueUsingEntityPath(timeoutInSeconds)
                     };
                 }
-                catch (MessagingException)
+                catch (MessagingException ex) when (!ex.IsTransient)
                 {
-                    // EntityPath points to an entity that is not a queue
+                    // EntityPath refers to a non-queue entity (e.g. event hub) — return empty list
+                    WriteToLog($"EntityPath '{ServiceBusNamespace.EntityPath}' is not a queue: {ex.Message}");
                     return new List<QueueDescription>();
                 }
             }
